@@ -10,11 +10,11 @@ function installed()
 	return installs
 end
 # Check if packages are installed, else install them
-Packages = []
+Packages = ["Plots"]
 installed_Packages = keys(installed())
 for Package in Packages
 	if !(Package in installed_Packages)
-		try 
+		try
 			eval(Meta.parse("using $Package"))
 		catch
 			Pkg.add(Package)
@@ -31,5 +31,4 @@ include("src/linear_advection_solver.jl")
 include("src/utilities.jl")
 include("test/lin_adv_example.jl")
 
-shouldlog=true
-small_test()
+small_test1()

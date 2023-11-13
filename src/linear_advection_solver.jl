@@ -5,10 +5,7 @@ function solve_lin_adv(sys::HyDySys, σ::Float64, a::Float64, t_end::Float64)
   N = size(sys.us, 1)
   dt = σ * sys.dx / a
   dx = sys.dx
-  println("Started evaluation with following Parameters:")
-  println("dt = ", dt)
-  println("dx = ", dx)
-  println("N = ", N)
+
   
   # add ghost cells, according to boundary condition
   if sys.bound_cond == :periodic
@@ -20,49 +17,33 @@ function solve_lin_adv(sys::HyDySys, σ::Float64, a::Float64, t_end::Float64)
   end
 
   
-  Δρ(ρs, j) = (ρs[j+1] - ρs[j])*(ρs[j] - ρs[j-1]) > 0 ? 
-              (ρs[j+1] - ρs[j])*(ρs[j] - ρs[j-1]) / max(ρs[j+1] + ρs[j-1], 0.0001) : 0
+  # Define Functions that are needed for better readability of the time step update
+  function Δρ(ρs, j)
+    if (ρs[j+1] - ρs[j])*(ρs[j] - ρs[j-1]) > 0
+      ( ρs[j+1] - ρs[j])*(ρs[j] - ρs[j-1]) / max(ρs[j+1] - ρs[j-1], 0.0001)
+    else
+      0
+    end
+  end
 
-  ρ_adv(ρs, us, j, dt_dx) = us[j] > 0 ?
-                            ρs[j-1] + 1/2*(2-us[j]*dt_dx) * Δρ(ρs, j-1) :
-                            ρs[j]   - 1/2*(2+us[j]*dt_dx) * Δρ(ρs, j)
+  function ρ_adv(ρs, us, j, dt_dx)
+    if us[j] > 0
+      return ρs[j-1] + 1/2*(1-us[j]*dt_dx) * Δρ(ρs, j-1)
+    else
+      return ρs[j]   - 1/2*(1+us[j]*dt_dx) * Δρ(ρs, j)
+    end
+  end
   
   Fm(ρs, us, j, dt_dx) = ρ_adv(ρs, us, j, dt_dx) * us[j]
   
+  # Start the actual simulation
   while t <= t_end
-    println("t = ", t)
-    t += dt
     ρs_copy = copy(ρs)
     us_copy = copy(us)
-
     for j in space_order+1:N+space_order
-    #   ρ_adv0 = 0
-    #   if us_copy[j] > 0
-    #     j_delta = j-1
-    #     Δρ = 2 * max(0, (ρs_copy[j_delta+1] - ρs_copy[j_delta]) * (ρs_copy[j_delta] - ρs_copy[j_delta-1]))/(ρs_copy[j_delta+1] - ρs_copy[j_delta-1] + 0.00001)
-    #     ρ_adv0 = ρs_copy[j-1] + 0.5+(1-us_copy[j] * dt/dx) * Δρ
-    #   else
-    #     j_delta = j
-    #     Δρ = 2 * max(0, (ρs_copy[j_delta+1] - ρs_copy[j_delta])(ρs_copy[j_delta] - ρs_copy[j_delta-1]))/(ρs_copy[j_delta+1] - ρs_copy[j_delta-1])
-    #     ρ_adv0 = ρs_copy[j] - 0.5+(1+us_copy[j] * dt/dx) * Δρ
-    #   end
-      
-    #   ρ_adv1 = 0
-    #   if us_copy[j+1] > 0
-    #     j_delta = j
-    #     Δρ = 2 * max(0, (ρs_copy[j_delta+1] - ρs_copy[j_delta]) * (ρs_copy[j_delta] - ρs_copy[j_delta-1]))/(ρs_copy[j_delta+1] - ρs_copy[j_delta-1] + 0.00001)
-    #     ρ_adv0 = ρs_copy[j] + 0.5+(1-us_copy[j+1] * dt/dx) * Δρ
-    #   else
-    #     j_delta = j+1
-    #     Δρ = 2 * max(0, (ρs_copy[j_delta+1] - ρs_copy[j_delta])(ρs_copy[j_delta] - ρs_copy[j_delta-1]))/(ρs_copy[j_delta+1] - ρs_copy[j_delta-1])
-    #     ρ_adv0 = ρs_copy[j+1] - 0.5+(1+us_copy[j+1] * dt/dx) * Δρ
-    #   end
-
-    #   Fm1 = ρ_adv1 * us_copy[j+1]
-    #   Fm0 = ρ_adv0 * us_copy[j]
-    #   # ρs[j] = ρs_copy[j] - σ/a * (Fm1 - Fm0)
-      ρs[j] = ρs_copy[j] - σ/a * (Fm(ρs_copy, us_copy, j+1, σ/a) - Fm(ρs_copy, us_copy, j, σ/a))
+      ρs[j] = ρs_copy[j] - dt/dx * (Fm(ρs_copy, us_copy, j+1, dt/dx) - Fm(ρs_copy, us_copy, j, dt/dx))
     end
+    t += dt
   end
 
   new_sys = HyDySys(ρs[space_order+1:end-space_order], dx, us[space_order+1:end-space_order], sys.bound_cond)
