@@ -31,4 +31,6 @@ include("src/linear_advection_solver.jl")
 include("src/utilities.jl")
 include("test/lin_adv_example.jl")
 
-small_test1()
+#small_test1()
+
+Test(Ψ, [-1,1], 1, 4, [40,400],:periodic)

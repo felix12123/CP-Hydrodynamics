@@ -49,4 +49,3 @@ function solve_lin_adv(sys::HyDySys, σ::Float64, a::Float64, t_end::Float64)
   new_sys = HyDySys(ρs[space_order+1:end-space_order], dx, us[space_order+1:end-space_order], sys.bound_cond)
   return new_sys
 end
-
