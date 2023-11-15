@@ -1,12 +1,12 @@
-
 # structure for a hydrodynamic system
 mutable struct HyDySys
   ρs::Vector{Float64}
   dx::Float64
   us::Vector{Float64}
   bound_cond::Symbol
+  ϵs::Vector{Float64}
 
-  function HyDySys(ρs::Vector{Float64}, dx::Float64, us::Vector{Float64}=zeros(Float64, size(ρs)), bound_cond::Symbol=:periodic)
+  function HyDySys(ρs::Vector{Float64}, dx::Float64, us::Vector{Float64}=zeros(Float64, size(ρs)), bound_cond::Symbol=:periodic, ϵs::Vector{Float64}=zeros(Float64, size(ρs)))
     valid_bound_conditions = [:periodic, :reflective] |> Tuple
     if !(bound_cond in valid_bound_conditions)
       error("boundary condition $bound_cond not valid. (valid conditions: $valid_bound_conditions)")

@@ -1,32 +1,26 @@
 # σ = a dt/dx   =>   dt = dx σ / a
 function solve_lin_adv(sys::HyDySys, σ::Float64, a::Float64, t_end::Float64)
-  space_order = 2
-  t = 0
-  N = size(sys.us, 1)
-  dt = σ * sys.dx / a
-  dx = sys.dx
-
+  space_order::Int = 2
+  t::Float64 = 0.0
+  N::Int = size(sys.us, 1)
+  dt::Float64 = σ * sys.dx / a
+  dx::Float64 = sys.dx
   
-  # add ghost cells, according to boundary condition
-  if sys.bound_cond == :periodic
-    ρs = vcat(sys.ρs[end-space_order+1:end], sys.ρs, sys.ρs[1:space_order])
-    us = vcat(sys.us[end-space_order+1:end], sys.us, sys.us[1:space_order])
-  else
-    error("Boundary condition not valid: $(sys.bound_cond)")
-    return false
-  end
-
+  ρs::Vector{Float64} = copy(sys.ρs)
+  us::Vector{Float64} = copy(sys.us)
+  
+  
   
   # Define Functions that are needed for better readability of the time step update
-  function Δρ(ρs, j)
+  function Δρ(ρs::Vector{Float64}, j::Int)::Float64
     if (ρs[j+1] - ρs[j])*(ρs[j] - ρs[j-1]) > 0
       ( ρs[j+1] - ρs[j])*(ρs[j] - ρs[j-1]) / max(ρs[j+1] - ρs[j-1], 0.0001)
     else
       0
     end
   end
-
-  function ρ_adv(ρs, us, j, dt_dx)
+  
+  function ρ_adv(ρs::Vector{Float64}, us::Vector{Float64}, j::Int, dt_dx::Float64)::Float64
     if us[j] > 0
       return ρs[j-1] + 1/2*(1-us[j]*dt_dx) * Δρ(ρs, j-1)
     else
@@ -34,18 +28,37 @@ function solve_lin_adv(sys::HyDySys, σ::Float64, a::Float64, t_end::Float64)
     end
   end
   
-  Fm(ρs, us, j, dt_dx) = ρ_adv(ρs, us, j, dt_dx) * us[j]
+  function Fm(ρs::Vector{Float64}, us::Vector{Float64}, j::Int, dt_dx::Float64)::Float64
+    ρ_adv(ρs, us, j, dt_dx) * us[j]
+  end
   
   # Start the actual simulation
   while t <= t_end
+    # add ghost cells, according to boundary condition
+    if sys.bound_cond == :periodic
+      ρs = vcat(ρs[end-space_order+1:end], ρs, ρs[1:space_order])
+      us = vcat(us[end-space_order+1:end], us, us[1:space_order])
+    else # might incorporate other boundary conditions later
+      error("Boundary condition not valid: $(sys.bound_cond)")
+      return false
+    end
+
+    # copy current state, to avoid aliasing
     ρs_copy = copy(ρs)
     us_copy = copy(us)
+
+    # update every cell
     for j in space_order+1:N+space_order
       ρs[j] = ρs_copy[j] - dt/dx * (Fm(ρs_copy, us_copy, j+1, dt/dx) - Fm(ρs_copy, us_copy, j, dt/dx))
     end
     t += dt
-  end
 
-  new_sys = HyDySys(ρs[space_order+1:end-space_order], dx, us[space_order+1:end-space_order], sys.bound_cond)
+    # remove ghost cells. they either have to be renewed in the next step,
+    # or they have to be cut before the system is returned
+    ρs = ρs[space_order+1:end-space_order]
+    us = us[space_order+1:end-space_order]
+  end
+  
+  new_sys = HyDySys(ρs, dx, us, sys.bound_cond)
   return new_sys
 end

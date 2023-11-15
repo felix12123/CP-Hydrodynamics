@@ -2,7 +2,7 @@ function small_test1()
 	N  = 40
 	dx = 2/N
 	a  = 1.0
-	σ  = 0.00001
+	σ  = 0.0008
 
 	dt = σ * dx / a
 	T  = 4.0
@@ -60,7 +60,7 @@ function Test(Psi_func, interval, a, t, gridsize, bound_cond)
 	for gs in gridsize
   
 		# Generiere Gitter
-		dx     = (interval[2]-interval[1])/gs
+		dx     = (interval[2]-interval[1])/(gs-1)
 		Gitter = interval[1] : dx : interval[2] |> collect
 		Gitter_analytisch = copy(Gitter)
 		
@@ -81,10 +81,6 @@ function Test(Psi_func, interval, a, t, gridsize, bound_cond)
 		Gitter_HyDySys = solve_lin_adv(HyDySys(ρs, dx, us, bound_cond), 0.8, 1.0, 4.0)
 		display(Gitter_HyDySys)
 
-		if gs == 40
-			println(Gitter_HyDySys.ρs)
-		end
-  
   
 		#plot(Gitter, Gitter_analytisch, title="Vorhersage für Gridsize ", linewidth=3, gs, label="", dp=300, color= :black)
 		#display(plot!(Gitter, Gitter_HyDySys, label="", dp=300, color=:red))
