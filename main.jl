@@ -28,9 +28,11 @@ end
 
 include("src/hydrodynamic_system_structs.jl")
 include("src/linear_advection_solver.jl")
+include("src/shock_tube_solver.jl")
 include("src/utilities.jl")
 include("test/lin_adv_example.jl")
+include("test/euler_eq_example.jl")
 
-#small_test1()
+small_test1()
 
-Test(Ψ, [-1,1], 1, 4, [40,400],:periodic)
+# Test(Ψ, [-1,1], 1, 4, [40,400],:periodic)

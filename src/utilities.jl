@@ -8,6 +8,6 @@ end
 function Base.show(io::IO, ::MIME"text/plain", systems::Vector{HyDySys})
 	xs = [[sys.dx .* (0:size(sys.us, 1)-1)  |> collect] for sys in systems]
 	ys = [[sys.ρs] for sys in systems]
-	display(plot(xs, ys))
+	display(plot(xs, ys, alpha=0.75))
 end
 

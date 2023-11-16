@@ -11,6 +11,7 @@ function solve_shock_tube(sys::HyDySys, σ::Float64, a::Float64, t_ende::Float64
     u       = sys.us
     ϵ       = sys.ϵs
     γ       = sys.γ
+    x_order = 3
 
 
     # Implementiere Formeln zur Lösung nach dem Schema des Opeartor-Splitting
@@ -169,17 +170,8 @@ function solve_shock_tube(sys::HyDySys, σ::Float64, a::Float64, t_ende::Float64
     # Nicht sicher, ob man den zwischenwert des Impulses aus der vorigen aufgabe nimmt oder nicht doch Gl. (2.36)
 
      
-    # Füge Geister-Zellen basierend auf den Randbedingungen (2.39) ein
-    if sys.bound_cond == :reflective
-        u = vcat([-u[2], 0],    u, [0,      -u[end-1]])
-        ρ = vcat([ρ[2],  ρ[1]], ρ, [ρ[end], ρ[end-1]])
-        ϵ = vcat([ϵ[2],  ϵ[1]], ϵ, [ϵ[end], ϵ[end-1]])
-    else
-       error("Boundary condition not valid: $(sys.bound_cond)")
-       return false
-    end
-
-
+    
+    
     # Beginne nun mit der eigentlichen Berechnung
     while t <= t_ende
         # Fertige Kopien der Systemgrößen an, damit bei der Berechnung nichts durcheinander kommt
@@ -187,44 +179,57 @@ function solve_shock_tube(sys::HyDySys, σ::Float64, a::Float64, t_ende::Float64
         us = copy(u)
         ϵs = copy(ϵ)
 
+        
+        # Füge Geister-Zellen basierend auf den Randbedingungen (2.39) ein
+        if sys.bound_cond == :reflective
+            us = vcat([-us[2], 0],     us, [0,      -us[end-1]])
+            ρs = vcat([ρs[2],  ρs[1]], ρs, [ρs[end], ρs[end-1]])
+            ϵs = vcat([ϵs[2],  ϵs[1]], ϵs, [ϵs[end], ϵs[end-1]])
+        elseif sys.bound_cond == :periodic
+            ρs = vcat(ρs[end-x_order+1:end], ρs, ρs[1:x_order])
+            us = vcat(us[end-x_order+1:end], us, us[1:x_order])
+            ϵs = vcat(ϵs[end-x_order+1:end], ϵs, ϵs[1:x_order])
+        else
+           error("Boundary condition not valid: $(sys.bound_cond)")
+           return false
+        end
+        
         # Fertige zusätzlich nochmal Kopien an, die nicht geupdated werden, damit
         # der zweite Zwischen- schritt der Berechnung korrekt durchgeführt werden kann.
         # So wird die Reihenhfolge bei der Berechnung des Advektionsschritts irrelevant.
-        ρs_not_updated = copy(ρ)
-        ϵs_not_updated = copy(ϵ)
+        ρs_not_updated = copy(ρs)
+        ϵs_not_updated = copy(ϵs)
 
         # Berechnung des Advektionsschritts, die updates erfolgen nach (2.31)
-        for j in 3 : (l + 2)
+        for j in (x_order+1):(l + x_order)
             ρs[j] = ρ_new(ρs, us, j, Δt, Δx)
             us[j] = zwischenwert_u(ρs_not_updated, us,     j, Δt, Δx)
             ϵs[j] = zwischenwert_ϵ(ρs_not_updated, us, ϵs, j, Δt, Δx)
         end
-
+        
         # Füge Geister-Zellen basierend auf den Randbedingungen (2.39) ein
         if sys.bound_cond == :reflective
-            u = vcat([-u[2], 0],    u, [0,      -u[end-1]])
-            ρ = vcat([ρ[2],  ρ[1]], ρ, [ρ[end], ρ[end-1]])
-            ϵ = vcat([ϵ[2],  ϵ[1]], ϵ, [ϵ[end], ϵ[end-1]])
+            us = vcat([-us[2], 0],     us[3:end-2], [0,      -us[end-1]])
+            ρs = vcat([ρs[2],  ρs[1]], ρs[3:end-2], [ρs[end], ρs[end-1]])
+            ϵs = vcat([ϵs[2],  ϵs[1]], ϵs[3:end-2], [ϵs[end], ϵs[end-1]])
+        elseif sys.bound_cond == :periodic
+            ρs = vcat(ρs[end-x_order+1:end], ρs[(x_order+1):(end-x_order)], ρs[1:x_order])
+            us = vcat(us[end-x_order+1:end], us[(x_order+1):(end-x_order)], us[1:x_order])
+            ϵs = vcat(ϵs[end-x_order+1:end], ϵs[(x_order+1):(end-x_order)],ϵs[1:x_order])
         else
            error("Boundary condition not valid: $(sys.bound_cond)")
            return false
         end
 
         # Berechnung der Kräfte und Druckarbeit, hier werden u und ϵ geupdated
-        for j in 3 : (l + 2)
+        for j in (x_order+1):(l + x_order)
             us[j] = u_new(ρs, us, ϵs, j, Δt, Δx, γ)
             ϵs[j] = ϵ_new(ρs, us, ϵs, j, Δt, Δx, γ)
         end
 
-        # Füge Geister-Zellen basierend auf den Randbedingungen (2.39) ein
-        if sys.bound_cond == :reflective
-            u = vcat([-u[2], 0],    u, [0,      -u[end-1]])
-            ρ = vcat([ρ[2],  ρ[1]], ρ, [ρ[end], ρ[end-1]])
-            ϵ = vcat([ϵ[2],  ϵ[1]], ϵ, [ϵ[end], ϵ[end-1]])
-        else
-           error("Boundary condition not valid: $(sys.bound_cond)")
-           return false
-        end
+        us = us[(x_order+1):(end-x_order)]
+        ρs = ρs[(x_order+1):(end-x_order)]
+        ϵs = ϵs[(x_order+1):(end-x_order)]
 
         # Update Zeitschritt
         t += Δt
