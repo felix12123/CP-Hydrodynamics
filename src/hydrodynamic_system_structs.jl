@@ -2,6 +2,7 @@
 mutable struct HyDySys
   ρs::Vector{Float64}
   dx::Float64
+  γ::Float64
   us::Vector{Float64}
   bound_cond::Symbol
   ϵs::Vector{Float64}

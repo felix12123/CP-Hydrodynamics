@@ -1,13 +1,15 @@
 # σ = a dt/dx   =>   dt = dx σ / a
 function solve_lin_adv(sys::HyDySys, σ::Float64, a::Float64, t_end::Float64)
   space_order::Int = 2
-  t::Float64 = 0.0
-  N::Int = size(sys.us, 1)
-  dt::Float64 = σ * sys.dx / a
-  dx::Float64 = sys.dx
+  t::Float64       = 0.0
+  N::Int           = size(sys.us, 1)
+  dt::Float64      = σ * sys.dx / a
+  dx::Float64      = sys.dx
+  γ::Float64       = sys.γ
   
   ρs::Vector{Float64} = copy(sys.ρs)
   us::Vector{Float64} = copy(sys.us)
+  ϵs::Vector{Float64} = copy(sys.ϵs)
   
   
   
@@ -59,6 +61,6 @@ function solve_lin_adv(sys::HyDySys, σ::Float64, a::Float64, t_end::Float64)
     us = us[space_order+1:end-space_order]
   end
   
-  new_sys = HyDySys(ρs, dx, us, sys.bound_cond)
+  new_sys = HyDySys(ρs, dx, us, sys.bound_cond, ϵs, γ)
   return new_sys
 end
