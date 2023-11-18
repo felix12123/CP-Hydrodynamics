@@ -28,7 +28,7 @@ end
 
 include("src/hydrodynamic_system_structs.jl")
 include("src/linear_advection_solver.jl")
-include("src/shock_tube_solver.jl")
+include("src/euler_solver.jl")
 include("src/utilities.jl")
 include("test/lin_adv_example.jl")
 include("test/euler_eq_example.jl")

@@ -1,6 +1,6 @@
 using Statistics
 
-function solve_shock_tube(sys::HyDySys, σ::Float64, a::Float64, t_ende::Float64)
+function solve_euler(sys::HyDySys, σ::Float64, a::Float64, t_ende::Float64)
     
     # Identifiziere wichtige Größen
     t       = 0.0
