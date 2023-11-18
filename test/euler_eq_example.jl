@@ -12,7 +12,7 @@ function small_test4()
 	dt = 0.001
 	σ = dt * a / dx
 
-	T  = 600.0*dt
+	T  = 500.0*dt
 
 	ρs = zeros(N)
 	ρs[div(3*N, 8):div(5*N, 8)] = ones(Float64, size(div(3*N, 8):div(5*N, 8), 1))

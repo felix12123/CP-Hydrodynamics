@@ -254,14 +254,12 @@ function solve_euler(sys::HyDySys, σ::Float64, a::Float64, t_ende::Float64)
         # Berechnung der Kräfte und Druckarbeit, hier werden u und ϵ geupdated
         # u → u^1 → u^{n+1}
         # ϵ → ϵ^1 → ϵ^{n+1}
-        if sys.bound_cond == :reflective    
-            for j in (Ordnung + 1):(l + Ordnung - 1)
-                # If-Schleife damit [j=3...N+1] eingehalten wird
-                if j >= (Ordnung+2)
-                    us[j] = u_new(ρs, us, ϵs, j, Δt, Δx, γ)
-                end
-                ϵs[j] = ϵ_new(ρs, us, ϵs, j, Δt, Δx, γ)
+        for j in (Ordnung + 1):(l + Ordnung - 1)
+            # If-Schleife damit [j=3...N+1] eingehalten wird
+            if j >= (Ordnung+2)
+                us[j] = u_new(ρs, us, ϵs, j, Δt, Δx, γ)
             end
+            ϵs[j] = ϵ_new(ρs, us, ϵs, j, Δt, Δx, γ)
         end
 
         #println("Update-Geschwindigkeit:", us)

@@ -14,13 +14,13 @@ function small_test1()
 	ρs[div(3*N, 8):div(5*N, 8)] = ones(Float64, size(div(3*N, 8):div(5*N, 8), 1))
 	us = ones(Float64, N) .* a
 	
-	sys = HyDySys(ρs, dx, us, :periodic)
-	new_sys1 = solve_lin_adv(sys, σ, a, T)
+	sys = HyDySys(ρs, dx, us, :reflective)
+#	new_sys1 = solve_lin_adv(sys, σ, a, T)
 	
 	steps = T/dt
 	frames = [sys]
 	for i in 1:steps
-		append!(frames, [solve_lin_adv(frames[end], σ, a, dt)])
+		append!(frames, [solve_euler(frames[end], σ, a, dt)])
 	end
 
 	visualize_system(frames, disp=false, save_path="media/A1_1.gif")
@@ -86,9 +86,10 @@ function Test(Psi_func, interval, a, t, gridsize, bound_cond)
 		end
 
 		#display(HyDySys(ρs, dx, us, bound_cond))
-		Gitter_HyDySys = solve_lin_adv(HyDySys(ρs, dx, us, bound_cond), 0.8, 1.0, 4.0)
+		Gitter_HyDySys = solver_euler(HyDySys(ρs, dx, us, bound_cond), 0.8, 1.0, 4.0)
 		display(Gitter_HyDySys)
 
+		
   
 		#plot(Gitter, Gitter_analytisch, title="Vorhersage für Gridsize ", linewidth=3, gs, label="", dp=300, color= :black)
 		#display(plot!(Gitter, Gitter_HyDySys, label="", dp=300, color=:red))
