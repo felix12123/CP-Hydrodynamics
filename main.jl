@@ -33,5 +33,5 @@ include("src/utilities.jl")
 include("test/lin_adv_example.jl")
 include("test/euler_eq_example.jl")
 
-small_test4()
+small_test1()
 # Test(Ψ, [-1,1], 1, 4, [40,400],:periodic)
