@@ -12,7 +12,7 @@ function small_test4()
 	dt = 0.001
 	σ = dt * a / dx
 
-	T  = 600.0*dt
+	T  = 228.0*dt
 
 	ρs = zeros(N)
 	ρs[div(3*N, 8):div(5*N, 8)] = ones(Float64, size(div(3*N, 8):div(5*N, 8), 1))
@@ -35,9 +35,6 @@ function A2()
 		N = 100
 		dx = 0.01
 		γ = 1.4
-		dt = 0.001
-
-		σ = 0.99# dt * a / dx
 		
 		xs = range(0, 1, N)
 		ρs = zeros(Float64, N)
@@ -55,15 +52,21 @@ function A2()
 	ul = (1.000, 2.5, 0.0)
 	ur = (0.125, 2.0, 0.0)
 	sys1 = make_start_sys(0.5, ul, ur)
+	display(sys1)
 	# println(sys1)
 	# solve_lin_adv(sys1, 0.8, 1.0, 0.0000001) |> visualize_system
+	
+	dt = 0.001
+	σ  = 0.99# dt * a / dx
+	T  = 200*dt
 
 	frames = [sys1]
 	steps = 10
 	for i in 1:steps
-		append!(frames, [solve_lin_adv(frames[end], 0.999, 1.0, 0.0000001)])
+		append!(frames, [solve_euler(frames[end], 0.999, 1.0, dt)])
 		# append!(frames, [solve_shock_tube(frames[end], 0.999, 1.0, 0.0000001)])
 	end
-	visualize_system(frames, save_path="media/A2.gif")
-	# solve_shock_tube(sys1, 0.8, 0.0, 1.0) |> display
+	visualize_system(frames, save_path="media/A2.gif", duration=20)
+	
+	return nothing
 end

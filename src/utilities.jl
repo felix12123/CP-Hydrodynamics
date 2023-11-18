@@ -47,7 +47,7 @@ function visualize_system(sys::Vector{HyDySys}; variable=:ρ, title="", disp=tru
 	end
 
 	if save_path != ""
-		gif1 = gif(anim, save_path, fps=size(sys, 1)/5)
+		gif1 = gif(anim, save_path, fps=ceil(Int, size(sys, 1)/5))
 		if disp
 			display(gif1)
 		end

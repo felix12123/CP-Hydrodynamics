@@ -7,7 +7,6 @@ function small_test1()
 	σ  = 0.8
 
 	dt = σ * dx / a
-	println("dt = ", dt)
 	T  = 2.0
 
 	ρs = zeros(Float64, N)
@@ -15,12 +14,12 @@ function small_test1()
 	us = ones(Float64, N) .* a
 	
 	sys = HyDySys(ρs, dx, us, :periodic)
-	new_sys1 = solve_lin_adv(sys, σ, a, T)
+	# new_sys1 = solve_lin_adv(sys, σ, a, T)
 	
 	steps = T/dt
 	frames = [sys]
 	for i in 1:steps
-		append!(frames, [solve_lin_adv(frames[end], σ, a, dt)])
+		append!(frames, [solve_euler(frames[end], σ, a, dt)])
 	end
 
 	visualize_system(frames, disp=false, save_path="media/A1_1.gif")
