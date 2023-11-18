@@ -7,7 +7,7 @@ mutable struct HyDySys
   ϵs::Vector{Float64}
   γ::Float64
 
-  function HyDySys(ρs::Vector{Float64}, dx::Float64, us::Vector{Float64}=zeros(Float64, size(ρs)), bound_cond::Symbol=:periodic, ϵs::Vector{Float64}=ones(Float64, size(ρs)), γ=0.5)
+  function HyDySys(ρs::Vector{Float64}, dx::Float64, us::Vector{Float64}=zeros(Float64, size(ρs)), bound_cond::Symbol=:periodic, ϵs::Vector{Float64}=ones(Float64, size(ρs)), γ=1.4)
     valid_bound_conditions = [:periodic, :reflective] |> Tuple
     if !(bound_cond in valid_bound_conditions)
       error("boundary condition $bound_cond not valid. (valid conditions: $valid_bound_conditions)")
