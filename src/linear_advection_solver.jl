@@ -15,8 +15,14 @@ function solve_lin_adv(sys::HyDySys, σ::Float64, a::Float64, t_end::Float64)
   
   # Define Functions that are needed for better readability of the time step update
   function Δρ(ρs::Vector{Float64}, j::Int)::Float64
-    if (ρs[j+1] - ρs[j])*(ρs[j] - ρs[j-1]) > 0
-      ( ρs[j+1] - ρs[j])*(ρs[j] - ρs[j-1]) / (ρs[j+1] - ρs[j-1])
+    temp1 = (ρs[j+1] - ρs[j])*(ρs[j] - ρs[j-1])
+    temp2 = (ρs[j+1] - ρs[j-1])
+    # if abs(temp2) ≈ 0
+    #   return 1
+    # end
+
+    if temp1 > 0
+      temp1 / temp2
     else
       0
     end

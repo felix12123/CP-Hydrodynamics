@@ -1,5 +1,7 @@
+using Plots
+
 function small_test1()
-	N  = 100
+	N  = 40
 	dx = 2/(N-1)
 	a  = 1.0
 	σ  = 0.8
@@ -8,16 +10,20 @@ function small_test1()
 	println("dt = ", dt)
 	T  = 2.0
 
-	pack_size = div(N, 4)
-	# ρs = vcat(zeros(Float64, floor(Int, (N-pack_size)/2)), ones(Float64, pack_size), zeros(Float64, ceil(Int, (N-pack_size)/2)))
 	ρs = zeros(Float64, N)
 	ρs[div(3*N, 8):div(5*N, 8)] = ones(Float64, size(div(3*N, 8):div(5*N, 8), 1))
 	us = ones(Float64, N) .* a
-
+	
 	sys = HyDySys(ρs, dx, us, :periodic)
 	new_sys1 = solve_lin_adv(sys, σ, a, T)
+	
+	steps = T/dt
+	frames = [sys]
+	for i in 1:steps
+		append!(frames, [solve_lin_adv(frames[end], σ, a, dt)])
+	end
 
-	display([sys, new_sys1])
+	visualize_system(frames, disp=false, save_path="media/A1_1.gif")
 end
 
 function small_test2()

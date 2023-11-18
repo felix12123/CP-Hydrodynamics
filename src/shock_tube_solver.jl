@@ -11,7 +11,7 @@ function solve_shock_tube(sys::HyDySys, σ::Float64, a::Float64, t_ende::Float64
     u       = sys.us
     ϵ       = sys.ϵs
     γ       = sys.γ
-    x_order = 3
+    x_order = 10
 
 
     # Implementiere Formeln zur Lösung nach dem Schema des Opeartor-Splitting
@@ -173,13 +173,14 @@ function solve_shock_tube(sys::HyDySys, σ::Float64, a::Float64, t_ende::Float64
     
     
     # Beginne nun mit der eigentlichen Berechnung
+    # Fertige Kopien der Systemgrößen an, damit bei der Berechnung nichts durcheinander kommt
+    ρs = copy(ρ)
+    us = copy(u)
+    ϵs = copy(ϵ)
     while t <= t_ende
-        # Fertige Kopien der Systemgrößen an, damit bei der Berechnung nichts durcheinander kommt
-        ρs = copy(ρ)
-        us = copy(u)
-        ϵs = copy(ϵ)
-
         
+        println(sys.bound_cond)
+        println("size of ρs before boundaries: ", ρs |> size)
         # Füge Geister-Zellen basierend auf den Randbedingungen (2.39) ein
         if sys.bound_cond == :reflective
             us = vcat([-us[2], 0],     us, [0,      -us[end-1]])
@@ -193,6 +194,7 @@ function solve_shock_tube(sys::HyDySys, σ::Float64, a::Float64, t_ende::Float64
            error("Boundary condition not valid: $(sys.bound_cond)")
            return false
         end
+        println("size of ρs after boundaries: ", ρs |> size)
         
         # Fertige zusätzlich nochmal Kopien an, die nicht geupdated werden, damit
         # der zweite Zwischen- schritt der Berechnung korrekt durchgeführt werden kann.
@@ -200,12 +202,17 @@ function solve_shock_tube(sys::HyDySys, σ::Float64, a::Float64, t_ende::Float64
         ρs_not_updated = copy(ρs)
         ϵs_not_updated = copy(ϵs)
 
+        println("x_order = ", x_order)
+        println("size(ρs) = ", size(ρs))
+        println("size(ρs_not_updated) = ", size(ρs_not_updated))
         # Berechnung des Advektionsschritts, die updates erfolgen nach (2.31)
         for j in (x_order+1):(l + x_order)
             ρs[j] = ρ_new(ρs, us, j, Δt, Δx)
             us[j] = zwischenwert_u(ρs_not_updated, us,     j, Δt, Δx)
-            ϵs[j] = zwischenwert_ϵ(ρs_not_updated, us, ϵs, j, Δt, Δx)
+            ϵs[j] = zwischenwert_ϵ(ϵs_not_updated, us, ϵs, j, Δt, Δx)
         end
+        
+        println("size of ρs before boundaries: ", ρs |> size)
         
         # Füge Geister-Zellen basierend auf den Randbedingungen (2.39) ein
         if sys.bound_cond == :reflective
@@ -217,9 +224,10 @@ function solve_shock_tube(sys::HyDySys, σ::Float64, a::Float64, t_ende::Float64
             us = vcat(us[end-x_order+1:end], us[(x_order+1):(end-x_order)], us[1:x_order])
             ϵs = vcat(ϵs[end-x_order+1:end], ϵs[(x_order+1):(end-x_order)],ϵs[1:x_order])
         else
-           error("Boundary condition not valid: $(sys.bound_cond)")
-           return false
+            error("Boundary condition not valid: $(sys.bound_cond)")
+            return false
         end
+        println("size of ρs after boundaries: ", ρs |> size)
 
         # Berechnung der Kräfte und Druckarbeit, hier werden u und ϵ geupdated
         for j in (x_order+1):(l + x_order)
@@ -235,5 +243,5 @@ function solve_shock_tube(sys::HyDySys, σ::Float64, a::Float64, t_ende::Float64
         t += Δt
     end
 
-    return HyDySys(ρ, Δx, u, :reflective, ϵ, γ)
+    return HyDySys(ρ, Δx, u, sys.bound_cond, ϵ, γ)
 end
