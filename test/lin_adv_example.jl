@@ -37,9 +37,11 @@ function small_test2()
 
 	sys = HyDySys(ρs, dx, us, :periodic)
 	new_sys = solve_lin_adv(sys, σ, a, T)
+	new_sys1 = solve_shock_tube(sys, σ, a, T)
 
 	# display([sys, new_sys])
 	display([sys, new_sys])
+	display([sys, new_sys1])
 end
 
 # Testing:

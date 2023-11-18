@@ -15,8 +15,9 @@ function solve_lin_adv(sys::HyDySys, σ::Float64, a::Float64, t_end::Float64)
   
   # Define Functions that are needed for better readability of the time step update
   function Δρ(ρs::Vector{Float64}, j::Int)::Float64
-    if (ρs[j+1] - ρs[j])*(ρs[j] - ρs[j-1]) > 0
-      ( ρs[j+1] - ρs[j])*(ρs[j] - ρs[j-1]) / (ρs[j+1] - ρs[j-1])
+    x = (ρs[j+1] - ρs[j])*(ρs[j] - ρs[j-1]) 
+    if x > 0
+      2 * x / (ρs[j+1] - ρs[j-1])
     else
       0
     end
@@ -34,9 +35,10 @@ function solve_lin_adv(sys::HyDySys, σ::Float64, a::Float64, t_end::Float64)
   function Fm(ρs::Vector{Float64}, us::Vector{Float64}, j::Int, dt_dx::Float64)::Float64
     ρ_adv(ρs, us, j, dt_dx) * us[j]
   end
-  
+  counter = 0
   # Start the actual simulation
   while t < t_end
+    counter += 1
     # add ghost cells, according to boundary condition
     if sys.bound_cond == :periodic
       ρs = vcat(ρs[end-space_order+1:end], ρs, ρs[1:space_order])
@@ -61,7 +63,7 @@ function solve_lin_adv(sys::HyDySys, σ::Float64, a::Float64, t_end::Float64)
     ρs = ρs[space_order+1:end-space_order]
     us = us[space_order+1:end-space_order]
   end
-  
+  println(ρs)
   new_sys = HyDySys(ρs, dx, us, sys.bound_cond, ϵs, γ)
   return new_sys
 end
