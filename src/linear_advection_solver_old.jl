@@ -44,7 +44,7 @@ function solve_lin_adv(sys::HyDySys, σ::Float64, a::Float64, t_end::Float64)
 			us[1]   = 0.0
 			us[end] = 0.0
 			# us = vcat(zeros(Float64, order-1), -us[order+2], us, -us[end-1], zeros(Float64, order-1))
-			us = vcat(-us[order+1:-1:2], us, us[(end-1):-1:(end-order)])
+			us = vcat(-us[order+1:-1:2], us, -us[(end-1):-1:(end-order)])
 			ρs = vcat(ρs[order:-1:1], ρs, ρs[(end):-1:(end-order+1)])
 			ϵs = vcat(ϵs[order:-1:1], ϵs, ϵs[(end):-1:(end-order+1)])
 			return ρs, us, ϵs

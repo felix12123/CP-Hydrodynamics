@@ -1,96 +1,92 @@
-using Plots
+function solve_adv()
 
-function small_test1()
-	N  = 40
-	dx = 2/(N-1)
-	a  = 1.0
-	σ  = 0.8
-
-	dt = σ * dx / a
-	T  = 2.0
-
-	ρs = zeros(Float64, N)
-	ρs[div(3*N, 8):div(5*N, 8)] = ones(Float64, size(div(3*N, 8):div(5*N, 8), 1))
-	us = ones(Float64, N) .* a
+	function make_start_sys(xs, N, Δx, γ)															# Erstelle Startsystem
 	
-	sys = HyDySys(ρs, dx, us, :reflective)
-#	new_sys1 = solve_lin_adv(sys, σ, a, T)
-	
-	steps = T/dt
-	frames = [sys]
-	for i in 1:steps
-		append!(frames, [solve_euler(frames[end], σ, a, dt)])
-	end
+		ρs = zeros(Float64, N)																		# Initialisiere Systemgrößen
+		ϵs = ones(Float64, N)
+		ps = ones(Float64, N)
+		us = ones(Float64, N+1) .* -1
 
-	visualize_system(frames, disp=false, save_path="media/A1_1.gif")
-end
-
-function small_test2()
-	N  = 2<<8
-	dx = 2/(N-1)
-	a  = 1.0
-	σ  = 0.8
-
-	dt = σ * dx / a
-	T  = 2.0  #dx*N/a / 500
-
-	gauss(x, μ, σ) = 1/(sqrt(2pi) * σ) * exp(-1/2*(x-μ)^2/σ^2)
-
-	xs = (1:N) .* dx
-	ρs = gauss.(xs, N/2*dx, N/25*dx)
-	us = ones(Float64, N) .* a
-
-	sys = HyDySys(ρs, dx, us, :periodic)
-	new_sys = solve_lin_adv(sys, σ, a, T)
-	new_sys1 = solve_shock_tube(sys, σ, a, T)
-
-	# display([sys, new_sys])
-	display([sys, new_sys])
-	display([sys, new_sys1])
-end
-
-# Testing:
-
-# Implementation der Funktoin Ψ(x,t)
-function Ψ(x, a, t, interval)
-	if abs(mod(x - a * t, (interval[2]-interval[1])/2)) <= 1/3
-		return 1
-	elseif 1/3 < abs(mod(x - a * t, (interval[2]-interval[1])/2)) <= 1
-		return 0
-	end
-end
-  
-# Check für das σ = 0.8, Ψ(x, t=4) und 40 Gitterpunkte im Intervall [-1,1]
-function Test(Psi_func, interval, a, t, gridsize, bound_cond)
-  
-	# Führe Test für alle angegebenen Gittergrößen durch
-	for gs in gridsize
-  
-		# Generiere Gitter
-		dx     = (interval[2]-interval[1])/(gs-1)
-		Gitter = interval[1] : dx : interval[2] |> collect
-		Gitter_analytisch = copy(Gitter)
-		
-		# Generiere für den Test das Array der Geschwindigkeiten
-		l = length(Gitter)
-		us = fill(1.0, l)
-		ρs = Vector{Float64}(undef, l)
-  
-		# Berechne analyt. Lösung und Startarray von ρs
-		for i in eachindex(Gitter)
-		  # Berechne analyt. Lösung für t=4
-		  Gitter_analytisch[i] = Psi_func(Gitter[i], a, t, interval)
-		  # Berechne ρs zu t=0
-		  ρs[i]                = float(Psi_func(Gitter[i], a, 0, interval))
+		for j in 1:N																				# Startkonfiguraiton für ρs
+			if abs(xs[j]) <= 1/3
+				ρs[j] = 1.0
+			else
+				ρs[j] = 0.0
+			end
 		end
-
-		#display(HyDySys(ρs, dx, us, bound_cond))
-		Gitter_HyDySys = solver_euler(HyDySys(ρs, dx, us, bound_cond), 0.8, 1.0, 4.0)
-		display(Gitter_HyDySys)
-
 		
-  
-		#plot(Gitter, Gitter_analytisch, title="Vorhersage für Gridsize ", linewidth=3, gs, label="", dp=300, color= :black)
-		#display(plot!(Gitter, Gitter_HyDySys, label="", dp=300, color=:red))
+		return HyDySys(ρs, Δx, us, :periodic, ϵs, 1.4, ps)											# Gebe System aus
 	end
+
+	N40		 = 40																					# Parameter aus der Aufgabenstellung ↓
+	N400	 = 400
+	σ  		 = 0.8
+	a  		 = 1.0
+	Δx40	 = 2/(N40-1)
+	Δt40	 = (σ*Δx40)/a
+	Δx400    = 2/(N400-1)
+	Δt400    = (σ*Δx400)/a
+	t_start  = 0.0
+	t_end4   = 4.0
+	t_end400 = 40.0
+	xs40     = collect(range(-1, 1, N40))
+	xs400    = collect(range(-1, 1, N400))
+	
+	start_sys40 = make_start_sys(xs40, N40, Δx40, 1.4)												# Erste Startkonfiguration
+	start_sys400 = make_start_sys(xs400, N400, Δx400, 1.4)
+
+	ρs_ana40 = copy(start_sys40.ρs)																	# Analytische Lsg. für ρs nach t_end Zeit (Nach C. Schäfer in beiden Fällen gleich)
+	for j in 1:N40
+		if abs(xs40[j] - 4 * Δx40) <= 1/3
+			ρs_ana40[j] = 1.0
+		else
+			ρs_ana40[j] = 0.0
+		end
+	end
+
+	ρs_ana400 = copy(start_sys400.ρs)																# Analytische Lsg. für ρs nach t_end Zeit (Nach C. Schäfer in beiden Fällen gleich)
+	for j in 1:N400
+		if abs(xs400[j] - 4 * Δx40) <= 1/3
+			ρs_ana400[j] = 1.0
+		else
+			ρs_ana400[j] = 0.0
+		end
+	end
+
+	# N=40, t=0
+	evolved_sys_N40_t0    = solve_advection(start_sys40, σ, a, t_start)
+	# N=40, t=4
+	evolved_sys_N40_t4    = solve_advection(start_sys40, σ, a, t_end4)
+	# N=400, t=0
+	evolved_sys_N400_t0   = solve_advection(start_sys400, σ, a, t_start)
+	# N=400, t=10
+	evolved_sys_N400_t400 = solve_advection(start_sys400, σ, a, t_end400)
+
+	# Analytischer vs. numerischer Plot zur Zeit N = 40 & t = 0
+	# plot(xs40, start_sys40.ρs, label="Analytische Lsg.", linewidth=2, linealpha=0.4, linecolor = :darkblue, dpi= 300, title="", xlabel="x", ylabel=L"\rho", background_color_legend = nothing, fg_legend = :transparent, grid=false)
+	plot(xs40, start_sys40.ρs, label="Analytische Lsg.", linewidth=2, linealpha=0.4, linecolor = :darkblue, dpi= 300, title="", xlabel="x", ylabel=L"\rho")
+	scatter!(xs40, evolved_sys_N40_t0.ρs, label="Numerische Lsg.", marker=:xcross, markersize=2, markerstrokewidth=2, markercoloer= :orange)
+	plot!(xs40, evolved_sys_N40_t0.ρs, label="", linewidth=1, linealpha=0.2, linecolor = :black)
+	savefig("media/A1_N40_t0.png")
+
+	# Analytischer vs. numerischer Plot zu N = 40 & t = 4
+	# plot(xs40, ρs_ana40, label="Analytische Lsg.", linewidth=2, linealpha=0.4, linecolor = :darkblue, dpi= 300, title="", xlabel="x", ylabel=L"\rho", background_color_legend = nothing, fg_legend = :transparent, grid=false)
+	plot(xs40, ρs_ana40, label="Analytische Lsg.", linewidth=2, linealpha=0.4, linecolor = :darkblue, dpi= 300, title="", xlabel="x", ylabel=L"\rho")
+	scatter!(xs40, evolved_sys_N40_t4.ρs, label="Numerische Lsg.", marker=:xcross, markersize=2, markerstrokewidth=2, markercoloer= :orange)
+	plot!(xs40, evolved_sys_N40_t4.ρs, label="", linewidth=1, linealpha=0.2, linecolor = :black)
+	savefig("media/A1_N40_t4.png")
+
+	# Analytischer vs. numerischer Plot zu N = 400 & t = 0
+	# plot(xs400, start_sys400.ρs, label="Analytische Lsg.", linewidth=2, linealpha=0.4, linecolor = :darkblue, dpi= 300, title="", xlabel="x", ylabel=L"\rho", background_color_legend = nothing, fg_legend = :transparent, grid=false)
+	plot(xs400, start_sys400.ρs, label="Analytische Lsg.", linewidth=2, linealpha=0.4, linecolor = :darkblue, dpi= 300, title="", xlabel="x", ylabel=L"\rho")
+	scatter!(xs400, evolved_sys_N400_t0.ρs, label="Numerische Lsg.", marker=:xcross, markersize=2, markerstrokewidth=2, markercoloer= :orange)
+	plot!(xs400, evolved_sys_N400_t0.ρs, label="", linewidth=1, linealpha=0.2, linecolor = :black)
+	savefig("media/A1_N400_t0.png")
+
+	# Analytischer vs. numerischer Plot zu N = 40 & t = 4
+	# plot(xs400, ρs_ana400, label="Analytische Lsg.", linewidth=2, linealpha=0.4, linecolor = :darkblue, dpi= 300, title="", xlabel="x", ylabel=L"\rho", background_color_legend = nothing, fg_legend = :transparent, grid=false)
+	plot(xs400, ρs_ana400, label="Analytische Lsg.", linewidth=2, linealpha=0.4, linecolor = :darkblue, dpi= 300, title="", xlabel="x", ylabel=L"\rho")
+	scatter!(xs400, evolved_sys_N400_t400.ρs, label="Numerische Lsg.", marker=:xcross, markersize=2, markerstrokewidth=2, markercoloer= :orange)
+	plot!(xs400, evolved_sys_N400_t400.ρs, label="", linewidth=1, linealpha=0.2, linecolor = :black)
+	savefig("media/A1_N400_t400.png")
 end

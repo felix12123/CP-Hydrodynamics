@@ -10,7 +10,7 @@ function installed()
 	return installs
 end
 # Check if packages are installed, else install them
-Packages = ["Plots"]
+Packages = ["Plots" "LaTeXStrings" "Statistics"]
 installed_Packages = keys(installed())
 for Package in Packages
 	if !(Package in installed_Packages)
@@ -27,11 +27,15 @@ for Package in Packages
 end
 
 include("src/hydrodynamic_system_structs.jl")
-include("src/linear_advection_solver.jl")
-include("src/euler_solver.jl")
 include("src/utilities.jl")
+include("src/lin_adv_solver.jl")
 include("test/lin_adv_example.jl")
-include("test/euler_eq_example.jl")
+include("src/euler_solver.jl")
 
-small_test1()
-# Test(Ψ, [-1,1], 1, 4, [40,400],:periodic)
+
+
+# Löse A1
+solve_adv()
+
+# Löse A2
+solve_euler(100, 1.4)
