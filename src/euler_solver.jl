@@ -187,6 +187,10 @@ function solve_euler(N, γ)
     ϵ             = zeros(Float64, N)
     pressure      = zeros(Float64, N)
     temperature   = zeros(Float64, N)
+	Δϵ            = zeros(Float64, N)
+    ϵ_adv         = zeros(Float64, N)
+    Δρ            = zeros(Float64, N)
+    ρ_adv         = zeros(Float64, N)
     u             = zeros(Float64, N+1)
     u_old         = zeros(Float64, N+1)
     mass_flux     = zeros(Float64, N+1)
@@ -194,10 +198,10 @@ function solve_euler(N, γ)
     momentum_flux = zeros(Float64, N+1)
     Δu            = zeros(Float64, N+1)
     u_adv         = zeros(Float64, N+1)
-    Δϵ            = zeros(Float64, N)
-    ϵ_adv         = zeros(Float64, N)
-    Δρ            = zeros(Float64, N)
-    ρ_adv         = zeros(Float64, N)
+
+	# Sets für das Anfügen von Geisterzellen:
+	set1 = [ρ, ρ0, ϵ, pressure, temperature, Δϵ, ϵ_adv, Δρ, ρ_adv]
+	set2 = [u, u_old, mass_flux, energy_flux, momentum_flux, Δu, u_adv]
 
     # Generiere Startsystem
     for i in 1:N
@@ -217,6 +221,16 @@ function solve_euler(N, γ)
 
         ρ0 = deepcopy(ρ)
 
+		for array in set1
+			array = vcat(array[2], array[1], array, array[end], array[end-1])
+		end
+
+		for array in set2
+			array = vcat(-array[1], array, -array[end-1])
+			array[2]   = 0
+			array[end-1] = 0
+		end
+
         calculate_pressure!(pressure, ρ, ϵ, N, γ)
 
         ρ_advection!(Δt, Δx, ρ, u, ϵ, mass_flux, Δρ, ρ_adv, N)
@@ -234,6 +248,14 @@ function solve_euler(N, γ)
         update_ϵ!(Δt, Δx, ρ, u_old, ϵ, pressure, N)
 
         calculate_Temperature!(temperature, ϵ, N, γ)
+
+		for array in set1
+			array = array[3:end-2]
+		end
+		
+		for array in set2
+			array = array[2:end-1]
+		end
 
         t_current += Δt
     end
