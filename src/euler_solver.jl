@@ -1,271 +1,279 @@
-using Statistics
+function solve_euler(N, γ)
 
-function solve_euler(sys::HyDySys, σ::Float64, a::Float64, t_ende::Float64)
-
-	# Identifiziere wichtige Größen
-	t       = 0.0
-	l       = size(sys.us, 1)
-	Δx      = sys.dx
-	Δt      = σ * Δx / a
-	ρs      = copy(sys.ρs)
-	us      = copy(sys.us)
-	ϵs      = copy(sys.ϵs)
-	γ       = sys.γ
-	ordnung = 2 +1
-
-	# Implementiere Formeln zur Lösung nach dem Schema des Opeartor-Splitting
-
-
-	# *********************************************************
-	# ***** 1) Advektionsschritt: A^1 = A^n + Δt*L_1(A^n) *****
-	# *********************************************************
-
+    # *****************************
+	# ***** Advektionsschritt *****
+	# *****************************
 
 	# ******************
 	# ***** Dichte *****
 	# ******************
 
-	# (2.16)
-	function Δρ(ρs, j)
-		# Vermeidung doppelter Berechnung
-		x = (ρs[j+1]-ρs[j])*(ρs[j]-ρs[j-1])
-		divisor = ρs[j+1]-ρs[j-1]
-		if x > 0
-			if divisor == 0
-				@warn "divisor is zero" maxlog=10
-				return 2 * x / 0.000001
-			elseif divisor != 0
-				return 2 * x / (ρs[j+1]-ρs[j-1])
-			end
-		else
-			return 0
-		end
-	end
+    function ρ_advection!(Δt, Δx, ρ, u, ϵ, mass_flux, Δρ, ρ_adv, N)
 
-	# (2.15)
-	function ρ_adv(ρs, us, j, Δt, Δx)
-		if us[j] > 0
-			return ρs[j-1] + (1/2)*(1-us[j]*Δt/Δx) * Δρ(ρs, j-1)
-		else
-			return ρs[j]   - (1/2)*(1+us[j]*Δt/Δx) * Δρ(ρs, j)
-		end
-	end
+        # (2.16) - Berechnung der Δρ
+        for i in 3:(N-2)
+            cond = (ρ[i+1]-ρ[i])*(ρ[i]-ρ[i-1])
+            if cond > 0
+                Δρ[i] = 2*cond/(ρ[i+1] - ρ[i-1])
+            else
+                Δρ[i] = 0
+            end
+        end
 
-	# (2.14)
-	function Fm(ρs, us, j, Δt, Δx)
-		return ρ_adv(ρs, us, j, Δt, Δx) * us[j]
-	end
+        # (2.15) - Berechnung ρ_adv
+        for i in 3:(N-2)
+            if u[i] > 0
+                ρ_adv[i] = ρ[i-1] + 0.5*(1-u[i]*Δt/Δx)*Δρ[i-1]
+            else
+                ρ_adv[i] = ρ[i] + 0.5*(1+u[i]*Δt/Δx)*Δρ[i]
+            end
+        end
 
-	# (2.13)
-	function ρ_new(ρs, us, j, Δt, Δx)
-		return ρs[j] - Δt/Δx * (Fm(ρs, us, j+1, Δt, Δx) - Fm(ρs, us, j, Δt, Δx))
-	end
+        # (2.14) - Berechnung Massenfluss
+        for i in 3:(N-2)
+            mass_flux[i] = ρ_adv[i]*u[i]
+        end
+
+        # (2.13)
+        for i in 3:(N-2)
+            ρ[i] = ρ[i] -  Δt/ Δx*(mass_flux[i+1] - mass_flux[i])
+        end
+
+    end
 
 
-	# ******************
-	# ***** Impuls *****
-	# ******************
 
-	# (2.22)
-	function Δu(us, j)
-		# Vermeidung doppelter Berechnung
-		x = (us[j+1]-us[j])*(us[j]-us[j-1])
-		divisor = us[j+1]-us[j-1]
-		if x > 0
-			if divisor == 0
-				@warn "divisor is zero" maxlog=10
-				return 2 * x / 0.000001
-			elseif divisor != 0
-				return 2 * x / divisor
-			end
-		else
-			return 0
-		end
-	end
+    # **********************************
+	# ***** Impuls/Geschwindigkeit *****
+	# **********************************
 
-	# (2.20)
-	function u_adv(us, j, Δt, Δx)
-		u_mean = mean([us[j], us[j+1]]) 
-		if u_mean > 0 
-			return us[j]   + (1/2) * (1 - u_mean * Δt/Δx) * Δu(us, j)
-		else
-			return us[j+1] - (1/2) * (1 + u_mean * Δt/Δx) * Δu(us, j+1)
-		end
-	end
+    function u_advection!(Δt, Δx, ρ, ρ0, u, ϵ, mass_flux, momentum_flux, Δu, u_adv, N)
 
-	# (2.19)
-	function Fl(ρs, us, j, Δt, Δx)
-		return mean([Fm(ρs, us, j, Δt, Δx), Fm(ρs, us, j+1, Δt, Δx)]) * u_adv(us, j, Δt, Δx)
-	end
+        # (2.22) - Berechne Δu
+        for i in 3:(N-2)
+            cond = (u[i+1]-u[i])*(u[i]-u[i-1])
+            if cond > 0
+                Δu[i] = 2*cond/(u[i+1]-u[i-1])
+            else
+                Δu[i] = 0
+            end
+        end
 
-	# (2.23)
-	function zwischenwert_u(ρs, ρs_new, us, j, Δt, Δx)
-		divisor = mean([ρs_new[j-1], ρs_new[j]])
-		if divisor == 0
-			@warn "divisor is zero" maxlog=10
-			return ((us[j]*mean([ρs[j], ρs[j-1]])) - Δt/Δx * (Fl(ρs, us, j, Δt, Δx) - Fl(ρs, us, j-1, Δt, Δx))) / 0.000001
-		else
-			return ((us[j]*mean([ρs[j], ρs[j-1]])) - Δt/Δx * (Fl(ρs, us, j, Δt, Δx) - Fl(ρs, us, j-1, Δt, Δx))) / divisor
-		end
-	end
+        # (2.20) - Berechne u_adv
+        for i in 3:(N-2)
+            ubar = 0.5*(u[i]+u[i+1])
+            if ubar > 0
+                u_adv[i] = u[i] + 0.5*(1-ubar*Δt/Δx)*Δu[i]
+            else
+                u_adv[i] = u[i+1] - 0.5*(1+ubar*Δt/Δx)*Δu[i+1] 
+            end
+        end
+
+        # (2.19) - Berechne Impulsfluss
+        for i in 3:(N-2)
+            momentum_flux[i] = 0.5*(mass_flux[i]+mass_flux[i+1])*u_adv[i]
+        end
+
+        # (2.23) - Berechne Zwischenwert von u
+        for i in 3:(N-2)
+            ρbar0 = 0.5*(ρ0[i-1] + ρ0[i])
+            ρbar  = 0.5*(ρ[i-1] + ρ[i])
+            u[i] = 1/ρbar*(u[i]*ρbar0-Δt/Δx*(momentum_flux[i]-momentum_flux[i-1]))
+        end
+
+    end
 
 
-	# *******************
+
+    # *******************
 	# ***** Energie *****
 	# *******************
 
-	# (2.29)
-	function Δϵ(ϵs, j)
-		# Vermeidung doppelter Berechnung
-		x = (ϵs[j+1]-ϵs[j]) * (ϵs[j]-ϵs[j-1])
-		if x > 0
-			return 2 * x / (ϵs[j+1]-ϵs[j-1])
+    function ϵ_advection!(Δt, Δx, ρ, ρ0, u, ϵ, mass_flux, energy_flux, Δϵ, ϵ_adv, N)
+    
+        # (2.29) - Berechne Δϵ
+        for i in 3:(N-2)
+            cond = (ϵ[i+1]-ϵ[i])*(ϵ[i]-ϵ[i-1])
+            if cond > 0
+                Δϵ[i] = 2*cond/(ϵ[i+1]-ϵ[i-1])
+            else
+                Δϵ[i] = 0
+            end
+        end
+
+        # (2.28) - Berechne ϵ_adv
+        for i in 3:(N-2)
+            if u[i] > 0
+                ϵ_adv[i] = ϵ[i-1] + 0.5*(1-u[i]*Δt/Δx)*Δϵ[i-1]
+            else
+                ϵ_adv[i] = ϵ[i]   - 0.5*(1+u[i]*Δt/Δx)*Δϵ[i]
+            end
+        end
+
+        # (2.27) - Berechne den Energiefluss
+        for i in 3:(N-2)
+            energy_flux[i] = mass_flux[i] * ϵ_adv[i]
+        end
+
+        # (2.30) - Berechne Zwischenwert von ϵ
+        for i in 3:(N-2)
+            ϵ[i] = 1/ρ[i] * (ϵ[i]*ρ0[i] - Δt/Δx *(energy_flux[i+1] - energy_flux[i]))
+        end
+
+    end
+
+
+
+    function calculate_pressure!(p, ρ, ϵ, N, γ)
+
+        # (2.36) - Berechne Druck
+        for i in 3:(N-2)
+            p[i] = (γ-1)*ρ[i]*ϵ[i]
+        end
+
+    end
+
+
+
+    function calculate_Temperature!(T, ϵ, N, γ)
+
+        # Berechne Temperatur
+        for i in 3:(N-2)
+            T[i] = ϵ[i]*(γ-1)
+        end
+
+    end
+
+
+
+    function update_u!(Δt, Δx, ρ, u, p, N)
+
+        # (2.34) - Berechne Endwert von u
+        for i in 3:(N-2)
+            ρbar = 0.5*(ρ[i-1] + ρ[i])
+            u[i] = u[i] -Δt/Δx*(p[i] - p[i-1])/ρbar
+        end
+
+    end
+
+
+
+    function update_ϵ!(Δt, Δx, ρ, u_old, ϵ, p, N)
+
+        # (2.38) - Berechne Endwert von ϵ
+        for i in 3:(N-2)
+            ϵ[i] = ϵ[i] -Δt/Δx*p[i]/ρ[i] * (u_old[i+1] - u_old[i])
+        end
+
+    end
+
+
+
+	# *****************************
+	# ***** Starte Berechnung *****
+	# *****************************
+
+    # Parameter aus der Aufgabenstellunge
+    x   = range(0,1,N)
+    Δx  = x[2]-x[1]
+    x_0 = 0.5
+    Δt  = 0.001
+    t_current = 0.0
+    t_end     = 0.228
+
+    # Initialisiere alle Arrays
+    ρ             = zeros(Float64, N)
+    ρ0            = zeros(Float64, N)
+    ϵ             = zeros(Float64, N)
+    pressure      = zeros(Float64, N)
+    temperature   = zeros(Float64, N)
+	Δϵ            = zeros(Float64, N)
+    ϵ_adv         = zeros(Float64, N)
+    Δρ            = zeros(Float64, N)
+    ρ_adv         = zeros(Float64, N)
+    u             = zeros(Float64, N+1)
+    u_old         = zeros(Float64, N+1)
+    mass_flux     = zeros(Float64, N+1)
+    energy_flux   = zeros(Float64, N+1)
+    momentum_flux = zeros(Float64, N+1)
+    Δu            = zeros(Float64, N+1)
+    u_adv         = zeros(Float64, N+1)
+
+	# Sets für das Anfügen von Geisterzellen:
+	set1 = [ρ, ρ0, ϵ, pressure, temperature, Δϵ, ϵ_adv, Δρ, ρ_adv]
+	set2 = [u, u_old, mass_flux, energy_flux, momentum_flux, Δu, u_adv]
+
+    # Generiere Startsystem
+    for i in 1:N
+		if x[i] <= x_0
+			pressure[i] = 1.0
+			ρ[i]        = 1.0
+			ϵ[i]        = 2.5
 		else
-			return 0
+			pressure[i] = 0.1
+			ρ[i]        = 0.125
+			ϵ[i]        = 2.0
 		end
 	end
 
-	# (2.28)
-	function ϵ_adv(ϵs, us, j, Δt, Δx) 
-		if us[j] > 0
-			return ϵs[j-1] + (1/2) * (1 - us[j] * Δt/Δx) * Δϵ(ϵs, j-1)
-		else
-			return ϵs[j]   - (1/2) * (1 + us[j] * Δt/Δx) * Δϵ(ϵs, j)
-		end
-	end
+    # Beginne mit Algorithmus
+    while t_current < t_end
 
-	# (2.27)
-	function Fe(ρs, us, ϵs, j, Δt, Δx)
-		return Fm(ρs, us, j, Δt, Δx) * ϵ_adv(ϵs, us, j, Δt, Δx)
-	end
+        ρ0 = deepcopy(ρ)
 
-	# (2.30)
-	function zwischenwert_ϵ(ρs, ρs_new, us, ϵs, j, Δt, Δx)
-		divisor = mean([ρs_new[j-1], ρs_new[j]])
-		if divisor == 0
-            @warn "divisor is zero" maxlog=10
-			return (ϵs[j]*ρs[j] + Δt/Δx * (Fe(ρs, us, ϵs, j+1, Δt, Δx) - Fe(ρs, us, ϵs, j, Δt, Δx))) / 0.000001
-		else
-			return (ϵs[j]*ρs[j] + Δt/Δx * (Fe(ρs, us, ϵs, j+1, Δt, Δx) - Fe(ρs, us, ϵs, j, Δt, Δx))) / divisor
-		end
-	end
-
-
-
-	# ***************************************************************
-	# ***** 2) Kräfte, Druckarbeit: A^{n+1} = A^1 + Δt*L_2(A^1) *****
-	# ***************************************************************
-
-
-	# ******************
-	# ***** Impuls *****
-	# ******************
-
-	# (2.36)
-	function zwischenwert_p(ρs, ϵs, func_γ, j)
-		return (func_γ - 1) * ρs[j] * ϵs[j]
-	end
-
-	function u_new(ρs_new, us_zwischen, ϵs_zwischen, j ,Δt, Δx, func_γ)
-		divisor = mean([ρs_new[j-1], ρs_new[j]])
-		if divisor == 0
-			@warn "divisor is zero" maxlog=10
-			return us_zwischen[j] - Δt * (1/0.00001) * ((func_γ-1)*(ρs_new[j]ϵs_zwischen[j]-ρs_new[j-1]ϵs_zwischen[j-1])/Δx)
-		else
-			return us_zwischen[j] - Δt * (1/divisor) * ((func_γ-1)*(ρs_new[j]ϵs_zwischen[j]-ρs_new[j-1]ϵs_zwischen[j-1])/Δx)
-		end
-	end
-
-	# *******************
-	# ***** Energie *****
-	# *******************   
-
-	function ϵ_new(ρs_new, us_zwischen, ϵs_zwischen, j ,Δt, Δx, func_γ)
-		divisor = ρs_new[j+1]
-		if divisor == 0
-			@warn "divisor is zero" maxlog=10
-			return ϵs_zwischen[j] - Δt * (((func_γ-1)*ρs_new[j]*ϵs_zwischen[j])/0.000001) * ((us_zwischen[j+1]-us_zwischen[j])/Δx)
-		elseif divisor != 0
-			return ϵs_zwischen[j] - Δt * (((func_γ-1)*ρs_new[j]*ϵs_zwischen[j])/ρs_new[j+1]) * ((us_zwischen[j+1]-us_zwischen[j])/Δx)
-		end
-	end
-
-	function add_ghost_cells!(ρs, us, ϵs, bound_cond, order)
-		ρs, us, ϵs = copy.([ρs, us, ϵs])
-		if bound_cond == :reflective
-			us[1]   = 0.0
-			us[end] = 0.0
-			# us = vcat(zeros(Float64, order-1), -us[order+2], us, -us[end-1], zeros(Float64, order-1))
-			us = vcat(-us[order+1:-1:2], us, us[(end-1):-1:(end-order)])
-			ρs = vcat(ρs[order:-1:1], ρs, ρs[(end):-1:(end-order+1)])
-			ϵs = vcat(ϵs[order:-1:1], ϵs, ϵs[(end):-1:(end-order+1)])
-			return ρs, us, ϵs
-		elseif bound_cond == :periodic
-			ρs = vcat(ρs[end-order+1:end], ρs, ρs[1:order])
-			us = vcat(us[end-order+1:end], us, us[1:order])
-			ϵs = vcat(ϵs[end-order+1:end], ϵs, ϵs[1:order])
-			return ρs, us, ϵs
-		else
-			error("Boundary condition not valid: $(bound_cond)")
-			return false
-		end
-	end
-
-	# Beginne nun mit der eigentlichen Berechnung
-	while t < t_ende
-		# Füge Geister-Zellen basierend auf den Randbedingungen (2.39) ein
-		ρs, us, ϵs = add_ghost_cells!(ρs, us, ϵs, sys.bound_cond, ordnung)
-
-		# Fertige Kopien der Systemgrößen an, damit bei der Berechnung nichts durcheinander kommt
-		ρs_copy, us_copy, ϵs_copy = copy(ρs), copy(us), copy(ϵs)
-
-
-		# Berechnung des Advektionsschritts, die updates erfolgen nach (2.31):
-		# ρ → ρ^{n+1}
-		# u → u^1
-		# ϵ → ϵ^1
-		# Berechne zuerst die neue Dichte des Systems:
-		for j in (ordnung+1):(l + ordnung - 1)
-			ρs[j] = ρ_new(ρs_copy, us_copy, j, Δt, Δx)
+		for array in set1
+			array = vcat(array[2], array[1], array, array[end], array[end-1])
 		end
 
-		# Berechne nun die Zwischenwerte der Geschwindigkeit und Energie
-		for j in (ordnung+1):(l + ordnung - 1)
-			# If-Schleife damit [j=3...N+1] eingehalten wird
-			if (j >= (ordnung+2))
-				us[j] = zwischenwert_u(ρs_copy, ρs, us_copy, j, Δt, Δx)
-			end
-			ϵs[j] = zwischenwert_ϵ(ρs_copy, ρs, us_copy, ϵs_copy, j, Δt, Δx) 
+		for array in set2
+			array = vcat(-array[1], array, -array[end-1])
+			array[2]   = 0
+			array[end-1] = 0
 		end
 
-		#println("Dichte zu t=", t, ": " , ρs)
-		#println("Zwischen-Geschwindigkeit:", us)
-		#println("Zwischen-Energie:", ϵs)
+        calculate_pressure!(pressure, ρ, ϵ, N, γ)
 
-		# Füge Geister-Zellen basierend auf den Randbedingungen (2.39) ein
-		ρs, us, ϵs = ρs[ordnung+1:end-ordnung], us[ordnung+1:end-ordnung], ϵs[ordnung+1:end-ordnung]
-		ρs, us, ϵs = add_ghost_cells!(ρs, us, ϵs, sys.bound_cond, ordnung)
+        ρ_advection!(Δt, Δx, ρ, u, ϵ, mass_flux, Δρ, ρ_adv, N)
 
+        u_advection!(Δt, Δx, ρ, ρ0, u, ϵ, mass_flux, momentum_flux, Δu, u_adv, N)
+            
+        ϵ_advection!(Δt, Δx, ρ, ρ0, u, ϵ, mass_flux, energy_flux, Δϵ, ϵ_adv, N)
 
-		# Berechnung der Kräfte und Druckarbeit, hier werden u und ϵ geupdated
-		# u → u^1 → u^{n+1}
-		# ϵ → ϵ^1 → ϵ^{n+1}
-		for j in (ordnung + 1):(l + ordnung - 1)
-			# If-Schleife damit [j=3...N+1] eingehalten wird
-			if j >= (ordnung+2)
-				us[j] = u_new(ρs, us, ϵs, j, Δt, Δx, γ)
-			end
-			ϵs[j] = ϵ_new(ρs, us, ϵs, j, Δt, Δx, γ)
+        calculate_pressure!(pressure, ρ, ϵ, N, γ)
+
+        u_old = deepcopy(u)
+
+        update_u!(Δt, Δx, ρ, u, pressure, N)
+
+        update_ϵ!(Δt, Δx, ρ, u_old, ϵ, pressure, N)
+
+        calculate_Temperature!(temperature, ϵ, N, γ)
+
+		for array in set1
+			array = array[3:end-2]
+		end
+		
+		for array in set2
+			array = array[2:end-1]
 		end
 
-		#println("Update-Geschwindigkeit:", us)
-		#println("Update-Energie:", ϵs)
+        t_current += Δt
+    end
 
-		# Entferne Giisterzellen
-		ρs, us, ϵs = ρs[ordnung+1:end-ordnung], us[ordnung+1:end-ordnung], ϵs[ordnung+1:end-ordnung]
+    plot(x, u[1:end-1], title="", xlabel=L"x", ylabel=L"u", dpi=300, linewidth=1, linealpha=0.2, linecolor = :black, label="")
+    scatter!(x, u[1:end-1], marker=:xcross, markersize=2, markerstrokewidth=2, markercoloer= :orange,label="")
+    savefig("media/A2_u_228")
+        
+    plot(x, ρ, title="", xlabel=L"x", ylabel=L"\rho", dpi=300, linewidth=1, linealpha=0.2, linecolor = :black, label="")
+    scatter!(x, ρ, marker=:xcross, markersize=2, markerstrokewidth=2, markercoloer= :orange,label="")
+    savefig("media/A2_rho_228")
+        
+    plot(x, temperature, title="", xlabel=L"x", ylabel=L"T", dpi=300, linewidth=1, linealpha=0.2, linecolor = :black, label="")
+    scatter!(x, temperature, marker=:xcross, markersize=2, markerstrokewidth=2, markercoloer= :orange,label="")
+    savefig("media/A2_T_228")
 
-		# Update Zeitschritt
-		t += Δt
-	end
-	return HyDySys(ρs, Δx, us, sys.bound_cond, ϵs, γ)
+    plot(x, ϵ, title="", xlabel=L"x", ylabel=L"\epsilon", dpi=300, linewidth=1, linealpha=0.2, linecolor = :black, label="")
+    scatter!(x, ϵ, marker=:xcross, markersize=2, markerstrokewidth=2, markercoloer= :orange,label="")
+    savefig("media/A2_epsilon_228")
+
 end
