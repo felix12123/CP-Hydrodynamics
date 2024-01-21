@@ -10,7 +10,7 @@ function installed()
 	return installs
 end
 # Check if packages are installed, else install them
-Packages = ["Plots" "LaTeXStrings" "Statistics"]
+Packages = ["Plots" "LaTeXStrings" "Statistics" "BenchmarkTools"]
 installed_Packages = keys(installed())
 for Package in Packages
 	if !(Package in installed_Packages)

@@ -1,3 +1,5 @@
+using BenchmarkTools
+
 function solve_adv()
 
 	function make_start_sys(xs, N, Δx, γ)															# Erstelle Startsystem
@@ -56,11 +58,11 @@ function solve_adv()
 	# N=40, t=0
 	evolved_sys_N40_t0    = solve_advection(start_sys40, σ, a, t_start)
 	# N=40, t=4
-	evolved_sys_N40_t4    = solve_advection(start_sys40, σ, a, t_end4)
+	@time evolved_sys_N40_t4    = solve_advection(start_sys40, σ, a, t_end4)
 	# N=400, t=0
 	evolved_sys_N400_t0   = solve_advection(start_sys400, σ, a, t_start)
 	# N=400, t=10
-	evolved_sys_N400_t400 = solve_advection(start_sys400, σ, a, t_end400)
+	@time evolved_sys_N400_t400 = solve_advection(start_sys400, σ, a, t_end400)
 
 	# Analytischer vs. numerischer Plot zur Zeit N = 40 & t = 0
 	# plot(xs40, start_sys40.ρs, label="Analytische Lsg.", linewidth=2, linealpha=0.4, linecolor = :darkblue, dpi= 300, title="", xlabel="x", ylabel=L"\rho", background_color_legend = nothing, fg_legend = :transparent, grid=false)

@@ -1,3 +1,5 @@
+using DelimitedFiles
+
 function solve_euler(N, γ)
 
     # *****************************
@@ -8,7 +10,7 @@ function solve_euler(N, γ)
 	# ***** Dichte *****
 	# ******************
 
-    function ρ_advection!(Δt, Δx, ρ, u, ϵ, mass_flux, Δρ, ρ_adv, N)
+    function ρ_advection!(Δt, Δx, ρ, u, mass_flux, Δρ, ρ_adv, N)
 
         # (2.16) - Berechnung der Δρ
         for i in 3:(N-2)
@@ -233,7 +235,7 @@ function solve_euler(N, γ)
 
         calculate_pressure!(pressure, ρ, ϵ, N, γ)
 
-        ρ_advection!(Δt, Δx, ρ, u, ϵ, mass_flux, Δρ, ρ_adv, N)
+        ρ_advection!(Δt, Δx, ρ, u, mass_flux, Δρ, ρ_adv, N)
 
         u_advection!(Δt, Δx, ρ, ρ0, u, ϵ, mass_flux, momentum_flux, Δu, u_adv, N)
             
@@ -260,20 +262,60 @@ function solve_euler(N, γ)
         t_current += Δt
     end
 
+    data = readdlm("data/musterlsg.csv", ';', header=true)[1]
+    x_muster = data[1:10:end, 1]
+    v_muster = data[1:10:end, 2]
+    ρ_muster = data[1:10:end, 3]
+    T_muster = data[1:10:end, 4]
+    P_muster = data[1:10:end, 5]
+
     plot(x, u[1:end-1], title="", xlabel=L"x", ylabel=L"u", dpi=300, linewidth=1, linealpha=0.2, linecolor = :black, label="")
-    scatter!(x, u[1:end-1], marker=:xcross, markersize=2, markerstrokewidth=2, markercoloer= :orange,label="")
+    scatter!(x, u[1:end-1], marker=:xcross, markersize=2, markerstrokewidth=2, markercoloer= :orange,label="Simulation")
+    plot!(x_muster[1:end-1], v_muster[1:end-1], dpi=300, linewidth=1, linealpha=0.2, linecolor =:blue, label="")
+    scatter!(x_muster[1:end-1], v_muster[1:end-1], markersize=1, markeralpha=0.5, markercoloer=:black,label="Musterlösung")    
     savefig("media/A2_u_228")
         
     plot(x, ρ, title="", xlabel=L"x", ylabel=L"\rho", dpi=300, linewidth=1, linealpha=0.2, linecolor = :black, label="")
-    scatter!(x, ρ, marker=:xcross, markersize=2, markerstrokewidth=2, markercoloer= :orange,label="")
+    scatter!(x, ρ, marker=:xcross, markersize=2, markerstrokewidth=2, markercoloer= :orange,label="Simulation")
+    plot!(x_muster[1:end-1], ρ_muster[1:end-1], dpi=300, linewidth=1, linealpha=0.2, linecolor =:blue, label="")
+    scatter!(x_muster[1:end-1], ρ_muster[1:end-1], markersize=1, markeralpha=0.5, markercoloer=:black,label="Musterlösung")
     savefig("media/A2_rho_228")
-        
+    
     plot(x, temperature, title="", xlabel=L"x", ylabel=L"T", dpi=300, linewidth=1, linealpha=0.2, linecolor = :black, label="")
-    scatter!(x, temperature, marker=:xcross, markersize=2, markerstrokewidth=2, markercoloer= :orange,label="")
-    savefig("media/A2_T_228")
-
-    plot(x, ϵ, title="", xlabel=L"x", ylabel=L"\epsilon", dpi=300, linewidth=1, linealpha=0.2, linecolor = :black, label="")
-    scatter!(x, ϵ, marker=:xcross, markersize=2, markerstrokewidth=2, markercoloer= :orange,label="")
+    scatter!(x, temperature, marker=:xcross, markersize=2, markerstrokewidth=2, markercoloer= :orange,label="Simulation")
+    plot!(x_muster[1:end-1], T_muster[1:end-1], dpi=300, linewidth=1, linealpha=0.2, linecolor =:blue, label="")
+    scatter!(x_muster[1:end-1], T_muster[1:end-1], markersize=1, markeralpha=0.5, markercoloer=:black,label="Musterlösung")
     savefig("media/A2_epsilon_228")
 
+    plot(x, pressure, title="", xlabel=L"x", ylabel=L"p", dpi=300, linewidth=1, linealpha=0.2, linecolor = :black, label="")
+    scatter!(x, pressure, marker=:xcross, markersize=2, markerstrokewidth=2, markercoloer= :orange,label="Simulation")
+    plot!(x_muster[1:end-1], P_muster[1:end-1], dpi=300, linewidth=1, linealpha=0.2, linecolor =:blue, label="")
+    scatter!(x_muster[1:end-1], P_muster[1:end-1], markersize=1, markeralpha=0.5, markercoloer=:black,label="Musterlösung")
+    savefig("media/A2_pressure_228")
+
+end
+
+function muster_lsg()
+    data = readdlm("data/musterlsg.csv", ';', header=true)[1]
+    x_muster = data[1:10:end, 1]
+    v_muster = data[1:10:end, 2]
+    ρ_muster = data[1:10:end, 3]
+    T_muster = data[1:10:end, 4]
+    P_muster = data[1:10:end, 5]
+
+    plot(x_muster, v_muster, title="", xlabel=L"x", ylabel=L"v", dpi=300, linewidth=1, linealpha=0.2, linecolor = :black, label="")
+    scatter!(x_muster, v_muster, marker=:xcross, markersize=2, markerstrokewidth=2, markercoloer= :orange,label="")
+    savefig("media/A2_muster_v_228")
+
+    plot(x_muster, ρ_muster, title="", xlabel=L"x", ylabel=L"\rho", dpi=300, linewidth=1, linealpha=0.2, linecolor = :black, label="")
+    scatter!(x_muster, ρ_muster, marker=:xcross, markersize=2, markerstrokewidth=2, markercoloer= :orange,label="")
+    savefig("media/A2_muster_rho_228")
+
+    plot(x_muster, T_muster, title="", xlabel=L"x", ylabel=L"T", dpi=300, linewidth=1, linealpha=0.2, linecolor = :black, label="")
+    scatter!(x_muster, T_muster, marker=:xcross, markersize=2, markerstrokewidth=2, markercoloer= :orange,label="")
+    savefig("media/A2_muster_T_228")
+
+    plot(x_muster, P_muster, title="", xlabel=L"x", ylabel=L"P", dpi=300, linewidth=1, linealpha=0.2, linecolor = :black, label="")
+    scatter!(x_muster, P_muster, marker=:xcross, markersize=2, markerstrokewidth=2, markercoloer= :orange,label="")
+    savefig("media/A2_muster_P_228")
 end
