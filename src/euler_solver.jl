@@ -295,27 +295,27 @@ function solve_euler(N, γ)
 
 end
 
-function muster_lsg()
-    data = readdlm("data/musterlsg.csv", ';', header=true)[1]
-    x_muster = data[1:10:end, 1]
-    v_muster = data[1:10:end, 2]
-    ρ_muster = data[1:10:end, 3]
-    T_muster = data[1:10:end, 4]
-    P_muster = data[1:10:end, 5]
-
-    plot(x_muster, v_muster, title="", xlabel=L"x", ylabel=L"v", dpi=300, linewidth=1, linealpha=0.2, linecolor = :black, label="")
-    scatter!(x_muster, v_muster, marker=:xcross, markersize=2, markerstrokewidth=2, markercoloer= :orange,label="")
-    savefig("media/A2_muster_v_228")
-
-    plot(x_muster, ρ_muster, title="", xlabel=L"x", ylabel=L"\rho", dpi=300, linewidth=1, linealpha=0.2, linecolor = :black, label="")
-    scatter!(x_muster, ρ_muster, marker=:xcross, markersize=2, markerstrokewidth=2, markercoloer= :orange,label="")
-    savefig("media/A2_muster_rho_228")
-
-    plot(x_muster, T_muster, title="", xlabel=L"x", ylabel=L"T", dpi=300, linewidth=1, linealpha=0.2, linecolor = :black, label="")
-    scatter!(x_muster, T_muster, marker=:xcross, markersize=2, markerstrokewidth=2, markercoloer= :orange,label="")
-    savefig("media/A2_muster_T_228")
-
-    plot(x_muster, P_muster, title="", xlabel=L"x", ylabel=L"P", dpi=300, linewidth=1, linealpha=0.2, linecolor = :black, label="")
-    scatter!(x_muster, P_muster, marker=:xcross, markersize=2, markerstrokewidth=2, markercoloer= :orange,label="")
-    savefig("media/A2_muster_P_228")
-end
+# function muster_lsg()
+    # data = readdlm("data/musterlsg.csv", ';', header=true)[1]
+    # x_muster = data[1:10:end, 1]
+    # v_muster = data[1:10:end, 2]
+    # ρ_muster = data[1:10:end, 3]
+    # T_muster = data[1:10:end, 4]
+    # P_muster = data[1:10:end, 5]
+# 
+    # plot(x_muster, v_muster, title="", xlabel=L"x", ylabel=L"v", dpi=300, linewidth=1, linealpha=0.2, linecolor = :black, label="")
+    # scatter!(x_muster, v_muster, marker=:xcross, markersize=2, markerstrokewidth=2, markercoloer= :orange,label="")
+    # savefig("media/A2_muster_v_228")
+# 
+    # plot(x_muster, ρ_muster, title="", xlabel=L"x", ylabel=L"\rho", dpi=300, linewidth=1, linealpha=0.2, linecolor = :black, label="")
+    # scatter!(x_muster, ρ_muster, marker=:xcross, markersize=2, markerstrokewidth=2, markercoloer= :orange,label="")
+    # savefig("media/A2_muster_rho_228")
+# 
+    # plot(x_muster, T_muster, title="", xlabel=L"x", ylabel=L"T", dpi=300, linewidth=1, linealpha=0.2, linecolor = :black, label="")
+    # scatter!(x_muster, T_muster, marker=:xcross, markersize=2, markerstrokewidth=2, markercoloer= :orange,label="")
+    # savefig("media/A2_muster_T_228")
+# 
+    # plot(x_muster, P_muster, title="", xlabel=L"x", ylabel=L"P", dpi=300, linewidth=1, linealpha=0.2, linecolor = :black, label="")
+    # scatter!(x_muster, P_muster, marker=:xcross, markersize=2, markerstrokewidth=2, markercoloer= :orange,label="")
+    # savefig("media/A2_muster_P_228")
+# end
